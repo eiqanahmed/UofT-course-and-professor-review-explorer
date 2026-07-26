@@ -1,0 +1,7 @@
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/CourseReviewExplorerApplication.java
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/api/ExplorerController.java
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/config/CorsConfig.java
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/model/Professor.java
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/model/Review.java
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/service/ReviewExplorerService.java
+/Users/eiqan/PycharmProjects/course_difficulty_predictor/backend/src/main/java/com/uoft/reviewexplorer/service/StudentExperiencePredictor.java

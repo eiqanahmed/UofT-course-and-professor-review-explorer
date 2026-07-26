@@ -1,0 +1,15 @@
+com/uoft/reviewexplorer/api/ExplorerController.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor$ModelSpec.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor$NumericSpec.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor$CategoricalSpec.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor$CategoricalBlock.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor$NumericBlock.class
+com/uoft/reviewexplorer/model/Professor.class
+com/uoft/reviewexplorer/service/ReviewExplorerService$BayesianPrior.class
+com/uoft/reviewexplorer/model/Review.class
+com/uoft/reviewexplorer/service/ReviewExplorerService.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor$Model.class
+com/uoft/reviewexplorer/service/StudentExperiencePredictor.class
+com/uoft/reviewexplorer/config/CorsConfig.class
+com/uoft/reviewexplorer/CourseReviewExplorerApplication.class
+com/uoft/reviewexplorer/service/ReviewExplorerService$SearchCriteria.class
