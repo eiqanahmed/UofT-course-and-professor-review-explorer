@@ -89,8 +89,13 @@ public class ReviewExplorerService {
     private final List<Review> reviews = new ArrayList<>();
     private final Map<Long, Professor> professors = new HashMap<>();
     private final Map<String, Double> inverseDocumentFrequency = new HashMap<>();
+    private final GeminiSummaryService geminiSummaryService;
     private StudentExperiencePredictor studentExperiencePredictor;
     private double globalQualityPrior = 3.5;
+
+    public ReviewExplorerService(GeminiSummaryService geminiSummaryService) {
+        this.geminiSummaryService = geminiSummaryService;
+    }
 
     private record BayesianPrior(double quality, int reviewCount, String label) {
     }
@@ -261,10 +266,15 @@ public class ReviewExplorerService {
             return Optional.empty();
         }
 
-        long courseReviewCount = reviews.stream().filter(review -> review.courseCode().equals(course)).count();
-        if (courseReviewCount == 0) {
+        List<Review> courseReviews = reviews.stream()
+                .filter(review -> review.courseCode().equals(course))
+                .toList();
+        if (courseReviews.isEmpty()) {
             return Optional.empty();
         }
+        List<Review> professorReviews = reviews.stream()
+                .filter(review -> review.professorId() == professorId.get())
+                .toList();
 
         OptionalDouble prediction = studentExperiencePredictor.predictCourseProfessor(course, professorId.get(), reviews);
         if (prediction.isEmpty()) {
@@ -278,9 +288,49 @@ public class ReviewExplorerService {
         payload.put("professorName", professor == null ? professorQuery : professor.name());
         payload.put("department", professor == null ? "Unknown Department" : professor.department());
         payload.put("experienceScore", round(prediction.getAsDouble(), 2));
-        payload.put("courseReviewCount", courseReviewCount);
-        payload.put("professorReviewCount", reviews.stream().filter(review -> review.professorId() == professorId.get()).count());
+        payload.put("courseReviewCount", courseReviews.size());
+        payload.put("professorReviewCount", professorReviews.size());
         payload.put("reason", "No direct reviews for this course/professor combination. Score is predicted from related course and professor review evidence.");
+        return Optional.of(payload);
+    }
+
+    public Optional<Map<String, Object>> unseenCombinationSummary(String courseCode, long professorId) {
+        String course = clean(courseCode).toUpperCase(Locale.ROOT);
+        Professor professor = professors.get(professorId);
+        if (course.isBlank() || professor == null) {
+            return Optional.empty();
+        }
+
+        boolean exactCombinationHasReviews = reviews.stream()
+                .anyMatch(review -> review.courseCode().equals(course) && review.professorId() == professorId);
+        if (exactCombinationHasReviews) {
+            return Optional.empty();
+        }
+
+        List<Review> courseReviews = reviews.stream()
+                .filter(review -> review.courseCode().equals(course))
+                .toList();
+        if (courseReviews.isEmpty()) {
+            return Optional.empty();
+        }
+        List<Review> professorReviews = reviews.stream()
+                .filter(review -> review.professorId() == professorId)
+                .toList();
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        geminiSummaryService.summarizeUnseenCombination(
+                course,
+                professorId,
+                professor.name(),
+                courseReviews,
+                professorReviews
+        ).ifPresent(summary -> {
+            payload.put("summary", summary.summary());
+            payload.put("summaryConfidence", summary.confidence());
+        });
+        if (!payload.containsKey("summary")) {
+            return Optional.empty();
+        }
         return Optional.of(payload);
     }
 

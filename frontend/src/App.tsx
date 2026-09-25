@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowLeft, GraduationCap, Search, Users } from "lucide-react";
+import { ArrowLeft, GraduationCap, Loader2, Search, Users } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getCourse, getOverview, getProfessor, searchEntities } from "./api";
+import { getCombinationSummary, getCourse, getOverview, getProfessor, searchEntities } from "./api";
 import type {
   CombinationPrediction,
   CourseDetail,
@@ -29,8 +29,8 @@ function format(value: number | null | undefined, suffix = "") {
 }
 
 function confidenceClass(label?: string) {
-  if (label === "High") return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (label === "Medium") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (label === "High" || label === "Positive") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (label === "Medium" || label === "Neutral") return "bg-amber-50 text-amber-700 border-amber-200";
   return "bg-rose-50 text-rose-700 border-rose-200";
 }
 
@@ -98,7 +98,7 @@ function ReviewCard({ review, label }: { review: Review | null; label?: string }
   if (!review) return null;
   return (
     <article className="rounded-lg border border-line bg-white p-4">
-      {label ? <Badge>{label}</Badge> : null}
+      {label ? <Badge label={label}>{label}</Badge> : null}
       <h3 className="mt-2 text-sm font-bold text-ink">
         {review.courseCode} · {review.professorName}
       </h3>
@@ -122,11 +122,41 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function SummaryText({ text }: { text: string }) {
+  const lines = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="mt-4 grid gap-4 text-sm leading-6 text-ink">
+      {lines.map((line, index) => {
+        const match = line.match(/^(\d+\.\s*)([^:]+):(.*)$/);
+        if (!match) {
+          return <p key={`${line}-${index}`}>{line}</p>;
+        }
+
+        return (
+          <section key={`${line}-${index}`} className="grid gap-1">
+            <h4 className="font-bold text-ink">
+              {match[1]}
+              {match[2]}
+            </h4>
+            {match[3].trim() ? <p>{match[3].trim()}</p> : null}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 export function App() {
   const [overview, setOverview] = useState<Overview>(emptyOverview);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [professors, setProfessors] = useState<ProfessorSummary[]>([]);
   const [combinationPrediction, setCombinationPrediction] = useState<CombinationPrediction | null>(null);
+  const [combinationSummaryLoading, setCombinationSummaryLoading] = useState(false);
+  const [combinationSummaryError, setCombinationSummaryError] = useState<string | null>(null);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [selectionHistory, setSelectionHistory] = useState<Selection[]>([]);
   const [query, setQuery] = useState("");
@@ -161,7 +191,31 @@ export function App() {
     }
     setCourses(data.courses);
     setProfessors(data.professors);
-    setCombinationPrediction(data.combinationPrediction ?? null);
+    const prediction = data.combinationPrediction ?? null;
+    setCombinationPrediction(prediction);
+    setCombinationSummaryError(null);
+    if (prediction) {
+      setCombinationSummaryLoading(true);
+      getCombinationSummary(prediction.courseCode, prediction.professorId)
+        .then((summary) => {
+          if (requestId !== searchRequestIdRef.current) {
+            return;
+          }
+          setCombinationPrediction((current) => (current ? { ...current, ...summary } : current));
+        })
+        .catch(() => {
+          if (requestId === searchRequestIdRef.current) {
+            setCombinationSummaryError("The AI summary could not be generated for this combination.");
+          }
+        })
+        .finally(() => {
+          if (requestId === searchRequestIdRef.current) {
+            setCombinationSummaryLoading(false);
+          }
+        });
+    } else {
+      setCombinationSummaryLoading(false);
+    }
     setSelection(null);
     setSelectionHistory([]);
   }
@@ -184,6 +238,8 @@ export function App() {
       setSelectionHistory([]);
     }
     setCombinationPrediction(null);
+    setCombinationSummaryLoading(false);
+    setCombinationSummaryError(null);
     setSelection({ kind: "course", id: courseCode, detail: await getCourse(courseCode) });
   }
 
@@ -194,6 +250,8 @@ export function App() {
       setSelectionHistory([]);
     }
     setCombinationPrediction(null);
+    setCombinationSummaryLoading(false);
+    setCombinationSummaryError(null);
     setSelection({ kind: "professor", id: professorId, detail: await getProfessor(professorId) });
   }
 
@@ -327,6 +385,29 @@ export function App() {
                     <Metric label="Course reviews" value={String(combinationPrediction.courseReviewCount)} />
                     <Metric label="Professor reviews" value={String(combinationPrediction.professorReviewCount)} />
                   </div>
+                  {combinationSummaryLoading ? (
+                    <article className="rounded-lg border border-line bg-white p-4">
+                      <div className="flex items-center gap-3 text-sm font-bold text-ink">
+                        <Loader2 className="h-4 w-4 animate-spin text-uoft" />
+                        Generating predicted experience summary
+                      </div>
+                      <p className="mt-2 text-sm text-muted">Using related course and professor reviews to produce an AI summary.</p>
+                    </article>
+                  ) : combinationPrediction.summary ? (
+                    <article className="rounded-lg border border-line bg-white p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="text-sm font-bold text-ink">Predicted experience summary</h3>
+                        {combinationPrediction.summaryConfidence ? (
+                          <Badge label={combinationPrediction.summaryConfidence}>{combinationPrediction.summaryConfidence} confidence</Badge>
+                        ) : null}
+                      </div>
+                      <SummaryText text={combinationPrediction.summary} />
+                    </article>
+                  ) : combinationSummaryError ? (
+                    <p className="text-sm text-muted">{combinationSummaryError}</p>
+                  ) : (
+                    <p className="text-sm text-muted">Set GEMINI_API_KEY on the backend to generate a written summary for unseen combinations.</p>
+                  )}
                 </div>
               ) : (
                 <>

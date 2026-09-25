@@ -106,6 +106,8 @@ export type CombinationPrediction = {
   courseReviewCount: number;
   professorReviewCount: number;
   reason: string;
+  summary?: string;
+  summaryConfidence?: "Low" | "Medium" | "High";
 };
 
 export type SearchResponse = {

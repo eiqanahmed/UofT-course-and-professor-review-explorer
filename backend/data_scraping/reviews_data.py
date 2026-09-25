@@ -174,6 +174,6 @@ if __name__ == "__main__":
 
     # df = pd.read_csv("professor_data.csv")
     # df.head(2).to_csv("test_professor_data.csv", index=False)
-    asyncio.run(scrape_reviews_for_all_profs("prof_data.csv"))
+    asyncio.run(scrape_reviews_for_all_profs("professor_data.csv"))
 
 

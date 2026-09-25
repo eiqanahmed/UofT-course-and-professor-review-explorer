@@ -1,4 +1,4 @@
-import type { CourseDetail, Overview, ProfessorDetail, SearchResponse } from "./types";
+import type { CombinationPrediction, CourseDetail, Overview, ProfessorDetail, SearchResponse } from "./types";
 
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path);
@@ -22,4 +22,12 @@ export function getCourse(courseCode: string) {
 
 export function getProfessor(professorId: number) {
   return getJson<ProfessorDetail>(`/api/professors/${professorId}`);
+}
+
+export function getCombinationSummary(courseCode: string, professorId: number) {
+  const params = new URLSearchParams({
+    course: courseCode,
+    professorId: String(professorId),
+  });
+  return getJson<Pick<CombinationPrediction, "summary" | "summaryConfidence">>(`/api/combinations/summary?${params.toString()}`);
 }

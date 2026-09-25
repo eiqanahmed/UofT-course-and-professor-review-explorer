@@ -43,6 +43,16 @@ public class ExplorerController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/combinations/summary")
+    public ResponseEntity<Map<String, Object>> combinationSummary(
+            @RequestParam String course,
+            @RequestParam long professorId
+    ) {
+        return service.unseenCombinationSummary(course, professorId)
+                .<ResponseEntity<Map<String, Object>>>map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/reviews")
     public Map<String, Object> reviews(@RequestParam Map<String, String> params) {
         return Map.of("reviews", service.reviews(params));
